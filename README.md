@@ -81,3 +81,16 @@ sem build). Para usar:
 - Defina `APP_CONTABIL_SECRET_KEY` com uma chave longa e aleatória
 - Configure CORS se o frontend rodar em outro domínio (`flask-cors`)
 - Use HTTPS em produção
+
+## Publicação na Vercel
+
+A interface e a API são servidas pelo mesmo domínio. Como as funções da
+Vercel não mantêm arquivos SQLite locais, conecte um banco Turso pelo
+Marketplace da Vercel e configure estas variáveis no projeto:
+
+- `TURSO_DATABASE_URL`
+- `TURSO_AUTH_TOKEN`
+- `APP_CONTABIL_SECRET_KEY` (uma chave longa, aleatória e permanente)
+
+Depois de salvar as variáveis, faça um novo deploy. A estrutura do banco é
+criada automaticamente na primeira inicialização.

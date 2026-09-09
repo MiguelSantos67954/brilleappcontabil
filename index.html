@@ -922,7 +922,8 @@
   "use strict";
 
   /* ---------------- estado ---------------- */
-  let API_URL = localStorage.getItem("livrocaixa_api_url") || "http://localhost:5000";
+  let API_URL = localStorage.getItem("livrocaixa_api_url") ||
+    (window.location.protocol === "file:" ? "http://localhost:5000" : window.location.origin);
   let token = null;
 
   function escaparHTML(valor) {

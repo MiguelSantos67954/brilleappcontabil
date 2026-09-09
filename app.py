@@ -4,7 +4,7 @@ API do sistema de lançamentos financeiros para clientes de consultoria contábi
 Rodar com:  python app.py
 Servidor sobe em: http://localhost:5000
 """
-from flask import Flask, request, jsonify, g
+from flask import Flask, request, jsonify, g, send_from_directory
 from flask_cors import CORS
 import os
 from datetime import datetime
@@ -22,6 +22,22 @@ CORS(app, origins=[
     r"^http://localhost(?::\d+)?$",
     r"^http://127\.0\.0\.1(?::\d+)?$",
 ])
+
+
+@app.get("/")
+@app.get("/index.html")
+def frontend():
+    return send_from_directory(app.root_path, "index.html")
+
+
+@app.get("/Brille.png")
+def logo_png():
+    return send_from_directory(app.root_path, "Brille.png")
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return send_from_directory(app.root_path, "Brille.ico")
 
 
 def _json():
@@ -1141,6 +1157,10 @@ def relatorio_extrato():
 @app.get("/api/status")
 def status():
     return jsonify({"status": "ok"})
+
+
+if os.environ.get("TURSO_DATABASE_URL"):
+    init_db()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,4 @@
-"""
-Conexão e inicialização do banco de dados SQLite.
-"""
+"""Conexão SQLite local ou Turso remoto para ambientes serverless."""
 import sqlite3
 import os
 
@@ -12,7 +10,20 @@ MIGRATIONS_PATH = os.path.join(BASE_DIR, "migrations.sql")
 
 def get_conn():
     """Abre uma conexão com o banco, retornando linhas como dicionários."""
-    conn = sqlite3.connect(DB_PATH)
+    turso_url = os.environ.get("TURSO_DATABASE_URL")
+    if turso_url:
+        import libsql
+        conn = libsql.connect(
+            database=turso_url,
+            auth_token=os.environ.get("TURSO_AUTH_TOKEN", ""),
+        )
+    else:
+        if os.environ.get("VERCEL"):
+            raise RuntimeError(
+                "Banco persistente não configurado. Defina TURSO_DATABASE_URL "
+                "e TURSO_AUTH_TOKEN nas variáveis da Vercel."
+            )
+        conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -20,14 +31,14 @@ def get_conn():
 
 def init_db():
     """Cria o banco a partir do schema.sql, caso ainda não exista."""
-    banco_novo = not os.path.exists(DB_PATH)
+    banco_novo = bool(os.environ.get("TURSO_DATABASE_URL")) or not os.path.exists(DB_PATH)
     if banco_novo:
         conn = get_conn()
         with open(SCHEMA_PATH, encoding="utf-8") as f:
             conn.executescript(f.read())
         conn.commit()
         conn.close()
-        print(f"Banco de dados criado em: {DB_PATH}")
+        print("Estrutura do banco verificada com sucesso")
 
     migrar_db()
 
