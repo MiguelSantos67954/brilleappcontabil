@@ -7,6 +7,7 @@ Servidor sobe em: http://localhost:5000
 from flask import Flask, request, jsonify, g, send_from_directory
 from flask_cors import CORS
 import os
+import hmac
 from datetime import datetime
 from datetime import date
 from calendar import monthrange
@@ -109,6 +110,39 @@ def login():
             "papel": usuario["papel"], "empresa_id": usuario["empresa_id"],
         },
     })
+
+
+@app.post("/api/setup/admin")
+def criar_primeiro_admin():
+    """Cria o primeiro administrador usando uma chave temporária do ambiente."""
+    chave_configurada = os.environ.get("APP_CONTABIL_SETUP_KEY", "")
+    chave_recebida = request.headers.get("X-Setup-Key", "")
+    if not chave_configurada or not hmac.compare_digest(chave_recebida, chave_configurada):
+        return jsonify({"erro": "Inicialização não autorizada"}), 403
+
+    d = _json()
+    if d is None:
+        return jsonify({"erro": "Corpo JSON inválido"}), 400
+    nome = str(d.get("nome", "")).strip()
+    email = str(d.get("email", "")).strip().lower()
+    senha = str(d.get("senha", ""))
+    if not nome or "@" not in email or len(senha) < 10:
+        return jsonify({"erro": "Nome, e-mail e senha com ao menos 10 caracteres são obrigatórios"}), 400
+
+    conn = get_conn()
+    existente = conn.execute("SELECT id FROM usuarios WHERE papel = 'admin' LIMIT 1").fetchone()
+    if existente:
+        conn.close()
+        return jsonify({"erro": "O administrador inicial já foi criado"}), 409
+    cur = conn.execute(
+        "INSERT INTO usuarios (empresa_id, nome, email, senha_hash, papel) "
+        "VALUES (NULL, ?, ?, ?, 'admin')",
+        (nome, email, generate_password_hash(senha)),
+    )
+    conn.commit()
+    admin_id = cur.lastrowid
+    conn.close()
+    return jsonify({"id": admin_id, "status": "administrador criado"}), 201
 
 
 @app.get("/api/auth/me")
