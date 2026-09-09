@@ -56,7 +56,8 @@ class _CursorCompativel:
         return [self._converter(linha) for linha in self._cursor.fetchall()]
 
     def __iter__(self):
-        for linha in self._cursor:
+        # O cursor libSQL não implementa o protocolo iterável do sqlite3.
+        for linha in self._cursor.fetchall():
             yield self._converter(linha)
 
 
