@@ -1,0 +1,21 @@
+# Dados locais e credenciais de ambiente
+*.db
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Arquivos locais/rascunhos que não fazem parte da aplicação
+LL.txt
+gemini-code-*.html
+iniciar programa.vbs
+
+# Editores e sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
