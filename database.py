@@ -136,6 +136,15 @@ def migrar_db():
         "estoque_atual": "REAL NOT NULL DEFAULT 0",
     })
 
+    _adicionar_colunas_se_faltando(conn, "vendas", {
+        "modalidade_pagamento": "TEXT NOT NULL DEFAULT 'dinheiro'",
+        "maquininha_id": "INTEGER REFERENCES maquininhas(id)",
+        "taxa_percentual": "REAL NOT NULL DEFAULT 0",
+        "taxa_valor": "REAL NOT NULL DEFAULT 0",
+        "taxa_lancamento_id": "INTEGER REFERENCES lancamentos(id)",
+        "parcelas": "INTEGER NOT NULL DEFAULT 1",
+    })
+
     # índice único de código só é criado depois que a coluna já existe garantidamente
     conn.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_produtos_codigo_unico

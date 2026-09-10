@@ -68,3 +68,43 @@ CREATE TABLE IF NOT EXISTS entradas_estoque (
 
 CREATE INDEX IF NOT EXISTS idx_entradas_estoque_empresa_data ON entradas_estoque(empresa_id, data_entrada);
 CREATE INDEX IF NOT EXISTS idx_entradas_estoque_produto ON entradas_estoque(produto_servico_id);
+
+-- ------------------------------------------------------------
+-- MAQUININHAS E TAXAS DE PAGAMENTO
+-- As taxas usadas em cada venda também ficam gravadas na própria venda,
+-- preservando o histórico caso o cadastro seja alterado futuramente.
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS maquininhas (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    empresa_id      INTEGER NOT NULL REFERENCES empresas(id) ON DELETE CASCADE,
+    nome            TEXT NOT NULL,
+    taxa_debito     REAL NOT NULL DEFAULT 0 CHECK (taxa_debito >= 0),
+    taxa_credito    REAL NOT NULL DEFAULT 0 CHECK (taxa_credito >= 0),
+    taxa_pix        REAL NOT NULL DEFAULT 0 CHECK (taxa_pix >= 0),
+    ativo           INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+    criado_em       TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (empresa_id, nome)
+);
+
+CREATE INDEX IF NOT EXISTS idx_maquininhas_empresa ON maquininhas(empresa_id);
+
+CREATE TABLE IF NOT EXISTS taxas_maquininha_credito (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    maquininha_id   INTEGER NOT NULL REFERENCES maquininhas(id) ON DELETE CASCADE,
+    parcelas        INTEGER NOT NULL CHECK (parcelas BETWEEN 1 AND 24),
+    taxa            REAL NOT NULL DEFAULT 0 CHECK (taxa >= 0 AND taxa <= 100),
+    UNIQUE (maquininha_id, parcelas)
+);
+
+INSERT OR IGNORE INTO taxas_maquininha_credito(maquininha_id, parcelas, taxa)
+SELECT id, 1, taxa_credito FROM maquininhas;
+
+INSERT INTO categorias(empresa_id, nome, tipo)
+SELECT NULL, 'Taxas de maquininha', 'despesa'
+WHERE NOT EXISTS (
+    SELECT 1 FROM categorias
+    WHERE empresa_id IS NULL AND nome = 'Taxas de maquininha' AND tipo = 'despesa'
+);
+
+INSERT OR IGNORE INTO formas_pagamento(nome) VALUES
+    ('Dinheiro'), ('Pix'), ('Débito'), ('Crédito');

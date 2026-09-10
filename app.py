@@ -305,7 +305,7 @@ def listar_categorias():
         return jsonify({"erro": "Acesso negado a esta empresa"}), 403
     conn = get_conn()
     linhas = conn.execute(
-        "SELECT * FROM categorias WHERE empresa_id IS NULL OR empresa_id = ? ORDER BY tipo, nome",
+        "SELECT * FROM categorias WHERE ativo = 1 AND (empresa_id IS NULL OR empresa_id = ?) ORDER BY tipo, nome",
         (empresa_id,),
     ).fetchall()
     conn.close()
@@ -320,15 +320,78 @@ def criar_categoria():
     empresa_id = d.get("empresa_id") or g.empresa_id
     if not empresa_permitida(empresa_id):
         return jsonify({"erro": "Acesso negado a esta empresa"}), 403
+    nome = str(d.get("nome", "")).strip()
+    tipo = str(d.get("tipo", "")).strip().lower()
+    if not nome or tipo not in ("receita", "despesa"):
+        return jsonify({"erro": "Informe o nome e um tipo válido para a categoria"}), 400
     conn = get_conn()
+    existente = conn.execute(
+        "SELECT id FROM categorias WHERE empresa_id = ? AND tipo = ? AND lower(nome) = lower(?) AND ativo = 1",
+        (empresa_id, tipo, nome),
+    ).fetchone()
+    if existente:
+        conn.close()
+        return jsonify({"erro": "Já existe uma categoria ativa com esse nome e tipo"}), 409
     cur = conn.execute(
         "INSERT INTO categorias (empresa_id, nome, tipo) VALUES (?, ?, ?)",
-        (empresa_id, d["nome"], d["tipo"]),
+        (empresa_id, nome, tipo),
     )
     conn.commit()
     categoria_id = cur.lastrowid
     conn.close()
     return jsonify({"id": categoria_id}), 201
+
+
+@app.put("/api/categorias/<int:categoria_id>")
+@login_required
+def editar_categoria(categoria_id):
+    d = request.get_json(force=True)
+    conn = get_conn()
+    categoria = conn.execute("SELECT * FROM categorias WHERE id = ?", (categoria_id,)).fetchone()
+    if not categoria:
+        conn.close()
+        return jsonify({"erro": "Categoria não encontrada"}), 404
+    if categoria["empresa_id"] is None:
+        conn.close()
+        return jsonify({"erro": "Categorias padrão do sistema não podem ser alteradas"}), 403
+    if not empresa_permitida(categoria["empresa_id"]):
+        conn.close()
+        return jsonify({"erro": "Acesso negado"}), 403
+    nome = str(d.get("nome", "")).strip()
+    if not nome:
+        conn.close()
+        return jsonify({"erro": "Informe o nome da categoria"}), 400
+    duplicada = conn.execute(
+        "SELECT id FROM categorias WHERE empresa_id = ? AND tipo = ? AND lower(nome) = lower(?) AND ativo = 1 AND id != ?",
+        (categoria["empresa_id"], categoria["tipo"], nome, categoria_id),
+    ).fetchone()
+    if duplicada:
+        conn.close()
+        return jsonify({"erro": "Já existe uma categoria ativa com esse nome e tipo"}), 409
+    conn.execute("UPDATE categorias SET nome = ? WHERE id = ?", (nome, categoria_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "atualizada"})
+
+
+@app.delete("/api/categorias/<int:categoria_id>")
+@login_required
+def desativar_categoria(categoria_id):
+    conn = get_conn()
+    categoria = conn.execute("SELECT * FROM categorias WHERE id = ?", (categoria_id,)).fetchone()
+    if not categoria:
+        conn.close()
+        return jsonify({"erro": "Categoria não encontrada"}), 404
+    if categoria["empresa_id"] is None:
+        conn.close()
+        return jsonify({"erro": "Categorias padrão do sistema não podem ser removidas"}), 403
+    if not empresa_permitida(categoria["empresa_id"]):
+        conn.close()
+        return jsonify({"erro": "Acesso negado"}), 403
+    conn.execute("UPDATE categorias SET ativo = 0 WHERE id = ?", (categoria_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "desativada"})
 
 
 # ============================================================
@@ -437,9 +500,9 @@ def editar_lancamento(lancamento_id):
         conn.close()
         return jsonify({"erro": "Acesso negado"}), 403
     vinculado = conn.execute(
-        "SELECT 1 FROM vendas WHERE lancamento_id = ? UNION ALL "
+        "SELECT 1 FROM vendas WHERE lancamento_id = ? OR taxa_lancamento_id = ? UNION ALL "
         "SELECT 1 FROM entradas_estoque WHERE lancamento_id = ? LIMIT 1",
-        (lancamento_id, lancamento_id),
+        (lancamento_id, lancamento_id, lancamento_id),
     ).fetchone()
     if vinculado:
         conn.close()
@@ -482,9 +545,9 @@ def cancelar_lancamento(lancamento_id):
         conn.close()
         return jsonify({"erro": "Acesso negado"}), 403
     vinculado = conn.execute(
-        "SELECT 1 FROM vendas WHERE lancamento_id = ? UNION ALL "
+        "SELECT 1 FROM vendas WHERE lancamento_id = ? OR taxa_lancamento_id = ? UNION ALL "
         "SELECT 1 FROM entradas_estoque WHERE lancamento_id = ? LIMIT 1",
-        (lancamento_id, lancamento_id),
+        (lancamento_id, lancamento_id, lancamento_id),
     ).fetchone()
     if vinculado:
         conn.close()
@@ -636,6 +699,134 @@ def desativar_produto_servico(item_id):
 
 
 # ============================================================
+# MAQUININHAS
+# ============================================================
+
+@app.get("/api/maquininhas")
+@login_required
+def listar_maquininhas():
+    empresa_id = request.args.get("empresa_id", type=int) or g.empresa_id
+    if not empresa_permitida(empresa_id):
+        return jsonify({"erro": "Acesso negado a esta empresa"}), 403
+    ativos = request.args.get("ativos") == "1"
+    conn = get_conn()
+    where_ativo = " AND ativo = 1" if ativos else ""
+    linhas = conn.execute(
+        f"SELECT * FROM maquininhas WHERE empresa_id = ?{where_ativo} ORDER BY nome",
+        (empresa_id,),
+    ).fetchall()
+    resultado = []
+    for linha in linhas:
+        maquina = dict(linha)
+        taxas = conn.execute(
+            "SELECT parcelas, taxa FROM taxas_maquininha_credito WHERE maquininha_id = ? ORDER BY parcelas",
+            (linha["id"],),
+        ).fetchall()
+        maquina["taxas_credito"] = [dict(t) for t in taxas] or [{"parcelas": 1, "taxa": linha["taxa_credito"]}]
+        resultado.append(maquina)
+    conn.close()
+    return jsonify(resultado)
+
+
+@app.post("/api/maquininhas")
+@login_required
+def criar_maquininha():
+    d = request.get_json(force=True)
+    empresa_id = d.get("empresa_id") or g.empresa_id
+    if not empresa_permitida(empresa_id):
+        return jsonify({"erro": "Acesso negado a esta empresa"}), 403
+    nome = str(d.get("nome", "")).strip()
+    if not nome:
+        return jsonify({"erro": "Informe o nome da maquininha"}), 400
+    try:
+        taxas_credito = {int(t["parcelas"]): float(t["taxa"]) for t in d.get("taxas_credito", [])}
+        taxas = [float(d.get("taxa_debito", 0)), float(d.get("taxa_pix", 0))]
+    except (TypeError, ValueError, OverflowError):
+        return jsonify({"erro": "As taxas devem ser numéricas"}), 400
+    if not taxas_credito:
+        taxas_credito = {1: float(d.get("taxa_credito", 0))}
+    if any(p < 1 or p > 24 for p in taxas_credito) or any(t < 0 or t > 100 for t in [*taxas, *taxas_credito.values()]):
+        return jsonify({"erro": "As taxas devem estar entre 0% e 100%"}), 400
+    conn = get_conn()
+    try:
+        cur = conn.execute(
+            "INSERT INTO maquininhas (empresa_id, nome, taxa_debito, taxa_credito, taxa_pix) VALUES (?, ?, ?, ?, ?)",
+            (empresa_id, nome, taxas[0], taxas_credito.get(1, 0), taxas[1]),
+        )
+        for parcelas, taxa in taxas_credito.items():
+            conn.execute(
+                "INSERT INTO taxas_maquininha_credito (maquininha_id, parcelas, taxa) VALUES (?, ?, ?)",
+                (cur.lastrowid, parcelas, taxa),
+            )
+        conn.commit()
+    except Exception as exc:
+        conn.rollback()
+        conn.close()
+        if "UNIQUE" in str(exc).upper():
+            return jsonify({"erro": "Já existe uma maquininha com esse nome"}), 409
+        raise
+    maquininha_id = cur.lastrowid
+    conn.close()
+    return jsonify({"id": maquininha_id}), 201
+
+
+@app.put("/api/maquininhas/<int:maquininha_id>")
+@login_required
+def editar_maquininha(maquininha_id):
+    d = request.get_json(force=True)
+    conn = get_conn()
+    atual = conn.execute("SELECT * FROM maquininhas WHERE id = ?", (maquininha_id,)).fetchone()
+    if not atual:
+        conn.close()
+        return jsonify({"erro": "Maquininha não encontrada"}), 404
+    if not empresa_permitida(atual["empresa_id"]):
+        conn.close()
+        return jsonify({"erro": "Acesso negado"}), 403
+    nome = str(d.get("nome", atual["nome"])).strip()
+    try:
+        taxas_credito = {int(t["parcelas"]): float(t["taxa"]) for t in d.get("taxas_credito", [])}
+        taxas = [float(d.get("taxa_debito", atual["taxa_debito"])), float(d.get("taxa_pix", atual["taxa_pix"]))]
+    except (TypeError, ValueError, OverflowError):
+        conn.close()
+        return jsonify({"erro": "As taxas devem ser numéricas"}), 400
+    if not taxas_credito:
+        taxas_credito = {1: float(d.get("taxa_credito", atual["taxa_credito"]))}
+    if not nome or any(p < 1 or p > 24 for p in taxas_credito) or any(t < 0 or t > 100 for t in [*taxas, *taxas_credito.values()]):
+        conn.close()
+        return jsonify({"erro": "Confira o nome e as taxas (0% a 100%)"}), 400
+    conn.execute(
+        "UPDATE maquininhas SET nome = ?, taxa_debito = ?, taxa_credito = ?, taxa_pix = ? WHERE id = ?",
+        (nome, taxas[0], taxas_credito.get(1, 0), taxas[1], maquininha_id),
+    )
+    conn.execute("DELETE FROM taxas_maquininha_credito WHERE maquininha_id = ?", (maquininha_id,))
+    for parcelas, taxa in taxas_credito.items():
+        conn.execute(
+            "INSERT INTO taxas_maquininha_credito (maquininha_id, parcelas, taxa) VALUES (?, ?, ?)",
+            (maquininha_id, parcelas, taxa),
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "atualizado"})
+
+
+@app.delete("/api/maquininhas/<int:maquininha_id>")
+@login_required
+def desativar_maquininha(maquininha_id):
+    conn = get_conn()
+    atual = conn.execute("SELECT * FROM maquininhas WHERE id = ?", (maquininha_id,)).fetchone()
+    if not atual:
+        conn.close()
+        return jsonify({"erro": "Maquininha não encontrada"}), 404
+    if not empresa_permitida(atual["empresa_id"]):
+        conn.close()
+        return jsonify({"erro": "Acesso negado"}), 403
+    conn.execute("UPDATE maquininhas SET ativo = 0 WHERE id = ?", (maquininha_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "desativada"})
+
+
+# ============================================================
 # VENDAS / PRESTAÇÕES DE SERVIÇO
 # Ao registrar, gera automaticamente o lançamento de receita
 # correspondente no fluxo de caixa.
@@ -649,9 +840,11 @@ def listar_vendas():
         return jsonify({"erro": "Acesso negado a esta empresa"}), 403
     conn = get_conn()
     linhas = conn.execute(
-        """SELECT v.*, ps.nome AS produto_servico_nome, ps.tipo AS produto_servico_tipo
+        """SELECT v.*, ps.nome AS produto_servico_nome, ps.tipo AS produto_servico_tipo,
+                  m.nome AS maquininha_nome
            FROM vendas v
            JOIN produtos_servicos ps ON ps.id = v.produto_servico_id
+           LEFT JOIN maquininhas m ON m.id = v.maquininha_id
            WHERE v.empresa_id = ?
            ORDER BY v.data_venda DESC, v.id DESC""",
         (empresa_id,),
@@ -705,6 +898,47 @@ def criar_venda():
             "erro": f"Estoque insuficiente. Disponível: {item['estoque_atual']:g} {item['unidade']}"
         }), 400
 
+    modalidade = str(d.get("modalidade_pagamento", "dinheiro")).strip().lower()
+    if modalidade not in ("dinheiro", "pix", "debito", "credito"):
+        conn.close()
+        return jsonify({"erro": "Modalidade de pagamento inválida"}), 400
+    try:
+        parcelas = int(d.get("parcelas", 1)) if modalidade == "credito" else 1
+    except (TypeError, ValueError):
+        conn.close()
+        return jsonify({"erro": "Quantidade de parcelas inválida"}), 400
+    if parcelas < 1 or parcelas > 24:
+        conn.close()
+        return jsonify({"erro": "As parcelas devem estar entre 1x e 24x"}), 400
+    maquininha = None
+    maquininha_id = d.get("maquininha_id")
+    if modalidade in ("debito", "credito") and not maquininha_id:
+        conn.close()
+        return jsonify({"erro": "Selecione a maquininha usada no pagamento"}), 400
+    if maquininha_id:
+        maquininha = conn.execute(
+            "SELECT * FROM maquininhas WHERE id = ? AND empresa_id = ? AND ativo = 1",
+            (maquininha_id, empresa_id),
+        ).fetchone()
+        if not maquininha:
+            conn.close()
+            return jsonify({"erro": "Maquininha não encontrada ou desativada"}), 400
+    campo_taxa = {"pix": "taxa_pix", "debito": "taxa_debito"}.get(modalidade)
+    taxa_percentual = float(maquininha[campo_taxa]) if maquininha and campo_taxa else 0
+    if maquininha and modalidade == "credito":
+        taxa_parcela = conn.execute(
+            "SELECT taxa FROM taxas_maquininha_credito WHERE maquininha_id = ? AND parcelas = ?",
+            (maquininha_id, parcelas),
+        ).fetchone()
+        if not taxa_parcela:
+            conn.close()
+            return jsonify({"erro": f"A maquininha não possui taxa cadastrada para crédito em {parcelas}x"}), 400
+        taxa_percentual = float(taxa_parcela["taxa"])
+    taxa_valor = round(valor_total * taxa_percentual / 100, 2)
+    nome_forma = {"dinheiro": "Dinheiro", "pix": "Pix", "debito": "Débito", "credito": "Crédito"}[modalidade]
+    forma = conn.execute("SELECT id FROM formas_pagamento WHERE nome = ?", (nome_forma,)).fetchone()
+    forma_pagamento_id = forma["id"] if forma else None
+
     # categoria do lançamento: a do produto/serviço, ou a categoria "Vendas" como padrão
     categoria_id = item["categoria_id"]
     if not categoria_id:
@@ -730,7 +964,7 @@ def criar_venda():
                (empresa_id, usuario_id, categoria_id, forma_pagamento_id,
                 tipo, descricao, valor, data_lancamento, status)
                VALUES (?, ?, ?, ?, 'receita', ?, ?, ?, 'confirmado')""",
-            (empresa_id, g.usuario_id, categoria_id, d.get("forma_pagamento_id"),
+            (empresa_id, g.usuario_id, categoria_id, forma_pagamento_id,
              descricao, valor_total, d["data_venda"]),
         )
         lancamento_id = cur_lanc.lastrowid
@@ -738,13 +972,41 @@ def criar_venda():
         cur_venda = conn.execute(
             """INSERT INTO vendas
                (empresa_id, usuario_id, produto_servico_id, quantidade, valor_unitario,
-                valor_total, cliente_nome, forma_pagamento_id, data_venda, lancamento_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                valor_total, cliente_nome, forma_pagamento_id, data_venda, lancamento_id,
+                modalidade_pagamento, maquininha_id, taxa_percentual, taxa_valor, parcelas)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (empresa_id, g.usuario_id, item["id"], quantidade, valor_unitario,
-             valor_total, d.get("cliente_nome"), d.get("forma_pagamento_id"),
-             d["data_venda"], lancamento_id),
+             valor_total, d.get("cliente_nome"), forma_pagamento_id,
+             d["data_venda"], lancamento_id, modalidade, maquininha_id,
+             taxa_percentual, taxa_valor, parcelas),
         )
         venda_id = cur_venda.lastrowid
+
+        taxa_lancamento_id = None
+        if taxa_valor > 0:
+            categoria_taxa = conn.execute(
+                "SELECT id FROM categorias WHERE tipo = 'despesa' AND nome = 'Taxas de maquininha' "
+                "AND (empresa_id IS NULL OR empresa_id = ?) ORDER BY empresa_id IS NULL LIMIT 1",
+                (empresa_id,),
+            ).fetchone()
+            if not categoria_taxa:
+                raise ValueError("Categoria de despesa 'Taxas de maquininha' não encontrada")
+            parcelamento = f" {parcelas}x" if modalidade == "credito" else ""
+            desc_taxa = f"Taxa {nome_forma}{parcelamento} — {maquininha['nome']} — venda #{venda_id}"
+            cur_taxa = conn.execute(
+                """INSERT INTO lancamentos
+                   (empresa_id, usuario_id, categoria_id, forma_pagamento_id, tipo,
+                    descricao, valor, data_lancamento, status)
+                   VALUES (?, ?, ?, ?, 'despesa', ?, ?, ?, 'confirmado')""",
+                (empresa_id, g.usuario_id, categoria_taxa["id"], forma_pagamento_id,
+                 desc_taxa, taxa_valor, d["data_venda"]),
+            )
+            taxa_lancamento_id = cur_taxa.lastrowid
+            conn.execute("UPDATE vendas SET taxa_lancamento_id = ? WHERE id = ?", (taxa_lancamento_id, venda_id))
+            conn.execute(
+                "INSERT INTO lancamentos_log (lancamento_id, usuario_id, acao, dados_novos) VALUES (?, ?, 'criado', ?)",
+                (taxa_lancamento_id, g.usuario_id, f"Taxa gerada automaticamente pela venda #{venda_id}"),
+            )
 
         if item["tipo"] == "produto":
             atualizado = conn.execute(
@@ -770,7 +1032,9 @@ def criar_venda():
         conn.close()
         raise
     conn.close()
-    return jsonify({"id": venda_id, "lancamento_id": lancamento_id, "valor_total": valor_total}), 201
+    return jsonify({"id": venda_id, "lancamento_id": lancamento_id,
+                    "taxa_lancamento_id": taxa_lancamento_id, "valor_total": valor_total,
+                    "taxa_valor": taxa_valor}), 201
 
 
 @app.delete("/api/vendas/<int:venda_id>")
@@ -807,6 +1071,14 @@ def cancelar_venda(venda_id):
             """INSERT INTO lancamentos_log (lancamento_id, usuario_id, acao)
                VALUES (?, ?, 'cancelado')""",
             (venda["lancamento_id"], g.usuario_id),
+        )
+    if venda["taxa_lancamento_id"]:
+        conn.execute(
+            "UPDATE lancamentos SET status = 'cancelado' WHERE id = ?", (venda["taxa_lancamento_id"],)
+        )
+        conn.execute(
+            "INSERT INTO lancamentos_log (lancamento_id, usuario_id, acao) VALUES (?, ?, 'cancelado')",
+            (venda["taxa_lancamento_id"], g.usuario_id),
         )
     conn.commit()
     conn.close()

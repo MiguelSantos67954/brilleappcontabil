@@ -87,7 +87,7 @@ WHERE l.status = 'confirmado'
 GROUP BY l.empresa_id, c.nome, c.tipo, strftime('%Y-%m', l.data_lancamento);
 
 INSERT OR IGNORE INTO formas_pagamento(nome) VALUES
-    ('Dinheiro'), ('Pix'), ('Boleto'), ('Cartão'), ('Transferência');
+    ('Dinheiro'), ('Pix'), ('Débito'), ('Crédito'), ('Boleto'), ('Cartão'), ('Transferência');
 
 INSERT INTO categorias(empresa_id, nome, tipo)
 SELECT NULL, 'Vendas', 'receita'

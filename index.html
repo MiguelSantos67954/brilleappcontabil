@@ -179,13 +179,26 @@
     margin-bottom: 36px;
     font-weight: 500;
   }
-  nav.menu { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  nav.menu { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .grupo-menu { border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 8px; }
+  .grupo-menu:last-child { border-bottom: 0; }
+  .titulo-grupo-menu {
+    width: 100%; background: none; border: none; color: #AFC5BE;
+    padding: 10px 8px 7px; display: flex; align-items: center;
+    justify-content: space-between; font-size: 11px; font-weight: 600;
+    letter-spacing: 0.09em; text-transform: uppercase;
+  }
+  .titulo-grupo-menu:hover { color: #FFFFFE; }
+  .seta-grupo { font-size: 15px; transition: transform 0.2s ease; }
+  .grupo-menu.fechado .seta-grupo { transform: rotate(-90deg); }
+  .itens-grupo { display: flex; flex-direction: column; gap: 3px; }
+  .grupo-menu.fechado .itens-grupo { display: none; }
   .item-menu {
     background: none;
     border: none;
     color: #E2E8F0;
     text-align: left;
-    padding: 10px 12px;
+    padding: 9px 12px 9px 16px;
     font-size: 14px;
     font-weight: 500;
     border-radius: 4px;
@@ -392,15 +405,74 @@
   .linha-empresa .nome { font-weight: 600; font-size: 14px; color: var(--green-dark); }
   .linha-empresa .cnpj { font-size: 12px; color: var(--ink-soft); font-family: var(--font-mono); }
 
+  .btn-menu-mobile { display: none; }
+
   @media (max-width: 860px) {
     #app { grid-template-columns: 1fr; }
-    aside { flex-direction: row; align-items: center; padding: 16px 20px; justify-content: space-between; }
+    aside {
+      position: sticky; top: 0; z-index: 40; flex-direction: row; flex-wrap: wrap;
+      align-items: center; padding: 12px 16px; justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(31,41,55,0.18);
+    }
     .logo-lateral-container { margin-bottom: 0; padding: 6px; }
-    nav.menu { flex-direction: row; flex: initial; gap: 8px; }
-    .rodape-lateral, .subtitulo-lateral { display: none; }
-    main { padding: 24px 20px; }
-    .grade-form { grid-template-columns: 1fr 1fr; }
+    .btn-menu-mobile {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; min-height: 44px; padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,0.35); border-radius: 4px;
+      background: transparent; color: #FFFFFE; font-size: 14px; font-weight: 600;
+    }
+    nav.menu {
+      flex: 0 0 100%; max-height: 0; overflow: hidden; opacity: 0;
+      pointer-events: none;
+      transition: max-height 0.2s ease, opacity 0.2s ease, margin-top 0.2s ease;
+    }
+    aside.menu-aberto nav.menu {
+      max-height: calc(100dvh - 82px); margin-top: 12px; overflow-y: auto;
+      opacity: 1; pointer-events: auto;
+    }
+    .grupo-menu { display: block; }
+    .titulo-grupo-menu { display: flex; min-height: 40px; }
+    .itens-grupo { flex-direction: column; gap: 3px; }
+    .item-menu { width: 100%; min-height: 44px; white-space: normal; padding: 10px 12px 10px 16px; }
+    .subtitulo-lateral { display: none; }
+    .rodape-lateral { display: none; flex: 0 0 100%; margin-top: 10px; }
+    aside.menu-aberto .rodape-lateral { display: block; }
+    .rodape-lateral .sair { min-height: 40px; padding: 8px 0; }
+    main { width: 100%; min-width: 0; padding: 24px 20px; }
+    .grade-form { grid-template-columns: 1fr 1fr !important; }
     .grade-relatorio { grid-template-columns: 1fr; }
+    .tabela-ledger {
+      display: block; max-width: 100%; overflow-x: auto; white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+    }
+    #mq-taxas-credito { grid-template-columns: repeat(3, minmax(80px, 1fr)) !important; }
+  }
+
+  @media (max-width: 560px) {
+    .cartao-login { width: calc(100% - 32px); padding: 30px 24px; }
+    main { padding: 20px 14px 36px; }
+    .cabecalho-secao { margin-bottom: 22px; }
+    .cabecalho-secao h2 { font-size: clamp(25px, 8vw, 30px); overflow-wrap: anywhere; }
+    .hero-saldo { gap: 20px 24px; padding: 18px 0 24px; }
+    .bloco-saldo { width: 100%; }
+    .bloco-saldo .numero { font-size: clamp(31px, 10vw, 40px); overflow-wrap: anywhere; }
+    .painel, .cartao-relatorio { padding: 18px 14px; }
+    .grade-form { grid-template-columns: minmax(0, 1fr) !important; }
+    .grade-form .btn-add { width: 100%; min-height: 44px; }
+    #mq-taxas-credito { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    #view-categorias > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+    .linha-empresa { align-items: flex-start; gap: 12px; flex-direction: column; }
+    .acoes-linha { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+    .acoes-linha button { min-height: 40px; padding: 6px 0; }
+    .linha-barra { align-items: flex-start; flex-wrap: wrap; }
+    .trilha-barra { min-width: calc(100% - 76px); }
+    .valor-barra { width: 100%; padding-left: 76px; text-align: left; }
+    .rotulo-tabs { overflow-x: auto; padding-bottom: 2px; }
+    .rotulo-tabs button { white-space: nowrap; min-height: 40px; }
+    .cartao-relatorio .wrap-grafico { height: 210px; }
+    #modal-editar-acesso > div { max-height: calc(100dvh - 24px); overflow-y: auto; padding: 24px 18px !important; }
+    #modal-editar-acesso > div > div:last-child { flex-direction: column; }
+    #modal-editar-acesso .btn { width: 100%; min-height: 44px; }
   }
 </style>
 </head>
@@ -439,6 +511,7 @@
     <div class="logo-lateral-container">
       <img src="Brille.png" alt="Brille Logo" class="logo-lateral-img">
     </div>
+    <button type="button" class="btn-menu-mobile" id="btn-menu-mobile" aria-expanded="false" aria-controls="menu-lateral">Menu</button>
     <div class="subtitulo-lateral" id="rotulo-empresa-lateral">Livro-Caixa</div>
     <nav class="menu" id="menu-lateral"></nav>
     <div class="rodape-lateral">
@@ -519,6 +592,35 @@
       <div id="vazio-lancamentos" class="vazio-tabela hidden">Nenhum lançamento ainda. Registre o primeiro movimento acima.</div>
     </section>
 
+    <!-- ---- VIEW: CATEGORIAS DE RECEITAS E DESPESAS ---- -->
+    <section id="view-categorias" class="hidden">
+      <div class="cabecalho-secao">
+        <div class="eyebrow">Cadastros financeiros</div>
+        <h2>Categorias de receitas e despesas</h2>
+      </div>
+      <div class="painel">
+        <h3>Nova categoria</h3>
+        <p style="font-size:12.5px; color:var(--ink-soft); margin:-8px 0 16px;">
+          Crie categorias específicas para esta empresa. Categorias já utilizadas podem ser desativadas sem apagar o histórico.
+        </p>
+        <form id="form-categoria">
+          <div class="grade-form" style="grid-template-columns:150px 1fr auto; max-width:650px;">
+            <div class="campo">
+              <label for="cat-tipo">Tipo</label>
+              <select id="cat-tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option></select>
+            </div>
+            <div class="campo"><label for="cat-nome">Nome da categoria</label><input id="cat-nome" placeholder="Ex: Mensalidades" required></div>
+            <button type="submit" class="btn-add">Cadastrar</button>
+          </div>
+          <div class="msg-form" id="msg-form-categoria"></div>
+        </form>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:20px;">
+        <div><h3 style="font-family:var(--font-display); color:var(--green-dark);">Receitas</h3><div id="lista-categorias-receita" class="lista-empresas"></div></div>
+        <div><h3 style="font-family:var(--font-display); color:var(--green-dark);">Despesas</h3><div id="lista-categorias-despesa" class="lista-empresas"></div></div>
+      </div>
+    </section>
+
     <!-- ---- VIEW: PRODUTOS E SERVIÇOS ---- -->
     <section id="view-produtos" class="hidden">
       <div class="cabecalho-secao">
@@ -593,6 +695,38 @@
       <div id="vazio-produtos" class="vazio-tabela hidden">Nenhum produto ou serviço cadastrado ainda.</div>
     </section>
 
+    <!-- ---- VIEW: MAQUININHAS ---- -->
+    <section id="view-maquininhas" class="hidden">
+      <div class="cabecalho-secao">
+        <div class="eyebrow">Meios de pagamento</div>
+        <h2>Maquininhas e taxas</h2>
+      </div>
+      <div class="painel">
+        <h3>Cadastrar maquininha</h3>
+        <p style="font-size:12.5px; color:var(--ink-soft); margin:-8px 0 16px;">
+          Informe a taxa percentual cobrada em cada modalidade. A taxa será lançada automaticamente como despesa na venda.
+        </p>
+        <form id="form-maquininha">
+          <div class="grade-form" style="grid-template-columns: 1.4fr 120px 120px auto;">
+            <div class="campo"><label for="mq-nome">Nome</label><input id="mq-nome" placeholder="Ex: Stone principal" required></div>
+            <div class="campo"><label for="mq-debito">Débito (%)</label><input type="number" id="mq-debito" min="0" max="100" step="0.001" value="0" required></div>
+            <div class="campo"><label for="mq-pix">Pix (%)</label><input type="number" id="mq-pix" min="0" max="100" step="0.001" value="0" required></div>
+            <button type="submit" class="btn-add">Cadastrar</button>
+          </div>
+          <div class="campo" style="margin-top:14px;">
+            <label>Taxas de crédito por parcelamento</label>
+            <div id="mq-taxas-credito" style="display:grid; grid-template-columns:repeat(6, minmax(90px, 1fr)); gap:8px;"></div>
+          </div>
+          <div class="msg-form" id="msg-form-maquininha"></div>
+        </form>
+      </div>
+      <table class="tabela-ledger">
+        <thead><tr><th>Maquininha</th><th class="num">Débito</th><th>Crédito parcelado</th><th class="num">Pix</th><th></th></tr></thead>
+        <tbody id="corpo-tabela-maquininhas"></tbody>
+      </table>
+      <div id="vazio-maquininhas" class="vazio-tabela hidden">Nenhuma maquininha cadastrada ainda.</div>
+    </section>
+
     <!-- ---- VIEW: VENDAS / PRESTAÇÃO DE SERVIÇO ---- -->
     <section id="view-vendas" class="hidden">
       <div class="cabecalho-secao">
@@ -606,7 +740,7 @@
           Ao registrar, o lançamento de receita correspondente é criado automaticamente no fluxo de caixa.
         </p>
         <form id="form-venda">
-          <div class="grade-form" style="grid-template-columns: 1.4fr 90px 120px 1fr 130px auto;">
+          <div class="grade-form" style="grid-template-columns: 1.4fr 80px 110px 1fr;">
             <div class="campo">
               <label for="vd-item">Produto ou serviço</label>
               <select id="vd-item" required></select>
@@ -627,8 +761,22 @@
               <label for="vd-data">Data</label>
               <input type="date" id="vd-data" required>
             </div>
+            <div class="campo">
+              <label for="vd-modalidade">Pagamento</label>
+              <select id="vd-modalidade" required>
+                <option value="dinheiro">Dinheiro</option><option value="pix">Pix</option>
+                <option value="debito">Débito</option><option value="credito">Crédito</option>
+              </select>
+            </div>
+            <div class="campo" id="campo-vd-maquininha" style="display:none;">
+              <label for="vd-maquininha">Maquininha</label><select id="vd-maquininha"></select>
+            </div>
+            <div class="campo" id="campo-vd-parcelas" style="display:none;">
+              <label for="vd-parcelas">Parcelas</label><select id="vd-parcelas"></select>
+            </div>
             <button type="submit" class="btn-add">Registrar</button>
           </div>
+          <div id="resumo-taxa-venda" style="font-size:12px; color:var(--ink-soft); margin-top:8px;">Sem taxa de pagamento.</div>
           <div class="msg-form" id="msg-form-venda"></div>
         </form>
       </div>
@@ -640,6 +788,8 @@
             <th>Item</th>
             <th>Cliente</th>
             <th class="num">Qtd.</th>
+            <th>Pagamento</th>
+            <th class="num">Taxa</th>
             <th class="num">Total</th>
             <th></th>
           </tr>
@@ -1021,41 +1171,88 @@
     montarMenu();
   }
 
+  const barraLateral = document.querySelector("#app aside");
+  const botaoMenuMobile = document.getElementById("btn-menu-mobile");
+
+  function fecharMenuMobile() {
+    barraLateral.classList.remove("menu-aberto");
+    botaoMenuMobile.setAttribute("aria-expanded", "false");
+    botaoMenuMobile.textContent = "Menu";
+  }
+
+  botaoMenuMobile.addEventListener("click", function () {
+    const aberto = barraLateral.classList.toggle("menu-aberto");
+    botaoMenuMobile.setAttribute("aria-expanded", String(aberto));
+    botaoMenuMobile.textContent = aberto ? "Fechar" : "Menu";
+  });
+
+  window.addEventListener("resize", function () {
+    if (window.innerWidth > 860) fecharMenuMobile();
+  });
+
   function montarMenu() {
     const menu = document.getElementById("menu-lateral");
     menu.innerHTML = "";
-    const itens = usuarioAtual.papel === "admin"
-      ? [{ id: "admin", label: "Empresas clientes" }]
+    const grupos = usuarioAtual.papel === "admin"
+      ? [{ titulo: "Cadastros", itens: [{ id: "admin", label: "Empresas clientes" }] }]
       : [
-          { id: "lancamentos", label: "Lançamentos" },
-          { id: "produtos", label: "Produtos e Serviços" },
-          { id: "vendas", label: "Vendas" },
-          { id: "entradas", label: "Entrada de Mercadorias" },
-          { id: "estoque", label: "Estoque" },
-          { id: "relatorios", label: "Relatórios" },
+          { titulo: "Atualizações", itens: [
+            { id: "lancamentos", label: "Lançamentos" },
+            { id: "vendas", label: "Vendas" },
+            { id: "entradas", label: "Entrada de Mercadorias" },
+          ]},
+          { titulo: "Cadastros", itens: [
+            { id: "categorias", label: "Categorias Financeiras" },
+            { id: "produtos", label: "Produtos e Serviços" },
+            { id: "maquininhas", label: "Maquininhas e Taxas" },
+          ]},
+          { titulo: "Relatórios", itens: [
+            { id: "estoque", label: "Posição de Estoque" },
+            { id: "relatorios", label: "Relatórios Gerenciais" },
+          ]},
         ];
 
-    itens.forEach((item, i) => {
-      const btn = document.createElement("button");
-      btn.className = "item-menu" + (i === 0 ? " ativo" : "");
-      btn.innerHTML = `<span class="marcador"></span>${item.label}`;
-      btn.addEventListener("click", () => mostrarView(item.id, btn));
-      menu.appendChild(btn);
+    grupos.forEach((grupo, indiceGrupo) => {
+      const secao = document.createElement("div");
+      secao.className = "grupo-menu";
+      const titulo = document.createElement("button");
+      titulo.type = "button";
+      titulo.className = "titulo-grupo-menu";
+      titulo.setAttribute("aria-expanded", "true");
+      titulo.innerHTML = `<span>${grupo.titulo}</span><span class="seta-grupo" aria-hidden="true">⌄</span>`;
+      titulo.addEventListener("click", () => {
+        const fechado = secao.classList.toggle("fechado");
+        titulo.setAttribute("aria-expanded", String(!fechado));
+      });
+      const lista = document.createElement("div");
+      lista.className = "itens-grupo";
+      grupo.itens.forEach((item, indiceItem) => {
+        const btn = document.createElement("button");
+        btn.className = "item-menu" + (indiceGrupo === 0 && indiceItem === 0 ? " ativo" : "");
+        btn.innerHTML = `<span class="marcador"></span>${item.label}`;
+        btn.addEventListener("click", () => mostrarView(item.id, btn));
+        lista.appendChild(btn);
+      });
+      secao.append(titulo, lista);
+      menu.appendChild(secao);
     });
 
-    mostrarView(itens[0].id, menu.querySelector(".item-menu"));
+    mostrarView(grupos[0].itens[0].id, menu.querySelector(".item-menu"));
   }
 
   function mostrarView(id, botao) {
     document.querySelectorAll("#menu-lateral .item-menu").forEach(b => b.classList.remove("ativo"));
     if (botao) botao.classList.add("ativo");
-    ["lancamentos", "produtos", "vendas", "entradas", "estoque", "relatorios", "admin"].forEach(v => {
+    ["lancamentos", "categorias", "produtos", "maquininhas", "vendas", "entradas", "estoque", "relatorios", "admin"].forEach(v => {
       document.getElementById("view-" + v).classList.add("hidden");
     });
     document.getElementById("view-" + id).classList.remove("hidden");
+    fecharMenuMobile();
 
     if (id === "lancamentos") carregarLancamentos();
+    if (id === "categorias") carregarCategorias();
     if (id === "produtos") carregarProdutos();
+    if (id === "maquininhas") carregarMaquininhas();
     if (id === "vendas") carregarVendas();
     if (id === "entradas") carregarEntradas();
     if (id === "estoque") carregarEstoque();
@@ -1087,6 +1284,53 @@
     });
   }
 
+  function renderizarCategoriasGerenciador() {
+    ["receita", "despesa"].forEach(tipo => {
+      const lista = document.getElementById("lista-categorias-" + tipo);
+      lista.innerHTML = "";
+      categorias.filter(c => c.tipo === tipo).forEach(c => {
+        const propria = c.empresa_id !== null;
+        const linha = document.createElement("div");
+        linha.className = "linha-empresa";
+        linha.innerHTML = `<div><div class="nome">${escaparHTML(c.nome)}</div>
+          <div class="cnpj">${propria ? 'Categoria da empresa' : 'Categoria padrão'}</div></div>
+          ${propria ? `<div class="acoes-linha"><button data-acao="editar-categoria" data-id="${c.id}">editar</button><button data-acao="remover-categoria" data-id="${c.id}">remover</button></div>` : ''}`;
+        lista.appendChild(linha);
+      });
+    });
+    document.querySelectorAll('[data-acao="editar-categoria"]').forEach(btn => btn.addEventListener("click", async function () {
+      const categoria = categorias.find(c => String(c.id) === this.dataset.id);
+      const nome = prompt("Novo nome da categoria:", categoria.nome);
+      if (nome === null || !nome.trim()) return;
+      try {
+        await api("PUT", "/api/categorias/" + categoria.id, { nome: nome.trim() });
+        await carregarCategorias();
+      } catch (err) { alert(err.message); }
+    }));
+    document.querySelectorAll('[data-acao="remover-categoria"]').forEach(btn => btn.addEventListener("click", async function () {
+      const categoria = categorias.find(c => String(c.id) === this.dataset.id);
+      if (!confirm(`Desativar a categoria "${categoria.nome}"? Os lançamentos anteriores não serão apagados.`)) return;
+      try {
+        await api("DELETE", "/api/categorias/" + categoria.id);
+        await carregarCategorias();
+      } catch (err) { alert(err.message); }
+    }));
+  }
+
+  document.getElementById("form-categoria").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const msgEl = document.getElementById("msg-form-categoria");
+    msgEl.style.display = "none";
+    try {
+      await api("POST", "/api/categorias", {
+        tipo: document.getElementById("cat-tipo").value,
+        nome: document.getElementById("cat-nome").value.trim(),
+      });
+      document.getElementById("cat-nome").value = "";
+      await carregarCategorias();
+    } catch (err) { msgEl.textContent = err.message; msgEl.style.display = "block"; }
+  });
+
   async function carregarLancamentos() {
     document.getElementById("eyebrow-lancamentos").textContent =
       "Movimento de " + new Date().toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
@@ -1097,6 +1341,11 @@
     const lancamentos = await api("GET", "/api/lancamentos");
     renderizarTabelaLancamentos(lancamentos);
     renderizarHeroSaldo(lancamentos);
+  }
+
+  async function carregarCategorias() {
+    categorias = await api("GET", "/api/categorias");
+    renderizarCategoriasGerenciador();
   }
 
   function renderizarHeroSaldo(lancamentos) {
@@ -1257,13 +1506,93 @@
     }
   });
 
+  /* ---------------- MAQUININHAS E TAXAS ---------------- */
+  let maquininhasAtivas = [];
+  const gradeTaxasCredito = document.getElementById("mq-taxas-credito");
+  for (let parcelas = 1; parcelas <= 12; parcelas++) {
+    const bloco = document.createElement("div");
+    bloco.innerHTML = `<span style="display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;">${parcelas}x</span>
+      <input type="number" data-taxa-parcelas="${parcelas}" min="0" max="100" step="0.001" placeholder="não aceita" ${parcelas === 1 ? 'value="0" required' : ''}>`;
+    gradeTaxasCredito.appendChild(bloco);
+  }
+
+  function taxasCreditoDoFormulario() {
+    return [...document.querySelectorAll("[data-taxa-parcelas]")]
+      .filter(input => input.value !== "")
+      .map(input => ({ parcelas: Number(input.dataset.taxaParcelas), taxa: Number(input.value) }));
+  }
+
+  async function carregarMaquininhas() {
+    const maquinas = await api("GET", "/api/maquininhas");
+    maquininhasAtivas = maquinas.filter(m => m.ativo);
+    const corpo = document.getElementById("corpo-tabela-maquininhas");
+    const vazio = document.getElementById("vazio-maquininhas");
+    corpo.innerHTML = "";
+    vazio.classList.toggle("hidden", maquininhasAtivas.length > 0);
+    maquininhasAtivas.forEach(m => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escaparHTML(m.nome)}</td>
+        <td class="num data">${Number(m.taxa_debito).toLocaleString('pt-BR')}%</td>
+        <td class="data">${m.taxas_credito.map(t => `${t.parcelas}x: ${Number(t.taxa).toLocaleString('pt-BR')}%`).join(' · ')}</td>
+        <td class="num data">${Number(m.taxa_pix).toLocaleString('pt-BR')}%</td>
+        <td><div class="acoes-linha">
+          <button data-acao="editar-maquininha" data-id="${m.id}">editar</button>
+          <button data-acao="remover-maquininha" data-id="${m.id}">remover</button>
+        </div></td>`;
+      corpo.appendChild(tr);
+    });
+    corpo.querySelectorAll('[data-acao="remover-maquininha"]').forEach(btn => btn.addEventListener("click", async function () {
+      if (!confirm("Remover esta maquininha? As vendas já registradas continuarão no histórico.")) return;
+      await api("DELETE", "/api/maquininhas/" + this.dataset.id);
+      carregarMaquininhas();
+    }));
+    corpo.querySelectorAll('[data-acao="editar-maquininha"]').forEach(btn => btn.addEventListener("click", async function () {
+      const m = maquininhasAtivas.find(x => String(x.id) === this.dataset.id);
+      const nome = prompt("Nome da maquininha:", m.nome);
+      if (nome === null) return;
+      const debito = prompt("Taxa de débito (%):", m.taxa_debito); if (debito === null) return;
+      const atualCredito = m.taxas_credito.map(t => `${t.parcelas}=${t.taxa}`).join('; ');
+      const credito = prompt("Taxas de crédito (formato 1=2,5; 2=3,1; 3=3,8):", atualCredito); if (credito === null) return;
+      const pix = prompt("Taxa de Pix (%):", m.taxa_pix); if (pix === null) return;
+      const taxasCredito = credito.split(';').map(parte => parte.trim()).filter(Boolean).map(parte => {
+        const [parcelas, taxa] = parte.split('=');
+        return { parcelas: Number(parcelas), taxa: Number(String(taxa).replace(',', '.')) };
+      });
+      await api("PUT", "/api/maquininhas/" + m.id, {
+        nome: nome.trim(), taxa_debito: Number(debito.replace(',', '.')),
+        taxas_credito: taxasCredito, taxa_pix: Number(pix.replace(',', '.')),
+      });
+      carregarMaquininhas();
+    }));
+  }
+
+  document.getElementById("form-maquininha").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const msgEl = document.getElementById("msg-form-maquininha");
+    msgEl.style.display = "none";
+    try {
+      await api("POST", "/api/maquininhas", {
+        nome: document.getElementById("mq-nome").value.trim(),
+        taxa_debito: Number(document.getElementById("mq-debito").value),
+        taxas_credito: taxasCreditoDoFormulario(),
+        taxa_pix: Number(document.getElementById("mq-pix").value),
+      });
+      this.reset();
+      document.getElementById("mq-debito").value = document.getElementById("mq-pix").value = "0";
+      document.querySelectorAll("[data-taxa-parcelas]").forEach(input => input.value = input.dataset.taxaParcelas === "1" ? "0" : "");
+      carregarMaquininhas();
+    } catch (err) { msgEl.textContent = err.message; msgEl.style.display = "block"; }
+  });
+
   /* ---------------- VENDAS / SERVIÇOS PRESTADOS (cliente) ---------------- */
   let catalogoAtual = [];
 
   document.getElementById("vd-data").valueAsDate = new Date();
 
   async function carregarVendas() {
-    catalogoAtual = await api("GET", "/api/produtos-servicos?ativos=1");
+    [catalogoAtual, maquininhasAtivas] = await Promise.all([
+      api("GET", "/api/produtos-servicos?ativos=1"), api("GET", "/api/maquininhas?ativos=1")
+    ]);
     const select = document.getElementById("vd-item");
     select.innerHTML = "";
     catalogoAtual.forEach(item => {
@@ -1273,6 +1602,7 @@
       select.appendChild(opt);
     });
     preencherValorUnitario();
+    preencherSelectMaquininhas();
 
     const vendas = await api("GET", "/api/vendas");
     renderizarTabelaVendas(vendas);
@@ -1284,6 +1614,40 @@
   }
 
   document.getElementById("vd-item").addEventListener("change", preencherValorUnitario);
+
+  function preencherSelectMaquininhas() {
+    const select = document.getElementById("vd-maquininha");
+    select.innerHTML = '<option value="">Selecione</option>';
+    maquininhasAtivas.forEach(m => select.add(new Option(m.nome, m.id)));
+    atualizarPagamentoVenda();
+  }
+
+  function atualizarPagamentoVenda() {
+    const modalidade = document.getElementById("vd-modalidade").value;
+    const campo = document.getElementById("campo-vd-maquininha");
+    const select = document.getElementById("vd-maquininha");
+    const campoParcelas = document.getElementById("campo-vd-parcelas");
+    const selectParcelas = document.getElementById("vd-parcelas");
+    campo.style.display = modalidade === "dinheiro" ? "none" : "block";
+    campoParcelas.style.display = modalidade === "credito" ? "block" : "none";
+    select.required = modalidade === "debito" || modalidade === "credito";
+    const maquina = maquininhasAtivas.find(m => String(m.id) === select.value);
+    if (modalidade === "credito" && maquina) {
+      const valorAnterior = selectParcelas.value;
+      selectParcelas.innerHTML = "";
+      maquina.taxas_credito.forEach(t => selectParcelas.add(new Option(`${t.parcelas}x`, t.parcelas)));
+      if ([...selectParcelas.options].some(o => o.value === valorAnterior)) selectParcelas.value = valorAnterior;
+    }
+    const taxaCredito = maquina && modalidade === "credito"
+      ? maquina.taxas_credito.find(t => String(t.parcelas) === selectParcelas.value) : null;
+    const taxa = taxaCredito ? Number(taxaCredito.taxa) : (maquina ? Number(maquina['taxa_' + modalidade] || 0) : 0);
+    const total = Number(document.getElementById("vd-quantidade").value || 0) * Number(document.getElementById("vd-valor-unitario").value || 0);
+    document.getElementById("resumo-taxa-venda").textContent = taxa > 0
+      ? `Taxa: ${taxa.toLocaleString('pt-BR')}% (${formatarMoeda(total * taxa / 100)}) · líquido ${formatarMoeda(total - total * taxa / 100)}`
+      : "Sem taxa de pagamento.";
+  }
+  ["vd-modalidade", "vd-maquininha", "vd-parcelas", "vd-quantidade", "vd-valor-unitario"].forEach(id =>
+    document.getElementById(id).addEventListener("change", atualizarPagamentoVenda));
 
   function renderizarTabelaVendas(vendas) {
     const corpo = document.getElementById("corpo-tabela-vendas");
@@ -1305,6 +1669,8 @@
         </td>
         <td>${escaparHTML(v.cliente_nome || '—')}</td>
         <td class="num data">${Number(v.quantidade) % 1 === 0 ? Number(v.quantidade) : v.quantidade}</td>
+        <td>${escaparHTML(({dinheiro:'Dinheiro', pix:'Pix', debito:'Débito', credito:'Crédito'})[v.modalidade_pagamento] || v.modalidade_pagamento)}${v.modalidade_pagamento === 'credito' ? ` ${v.parcelas}x` : ''}${v.maquininha_nome ? `<br><span class="data">${escaparHTML(v.maquininha_nome)}</span>` : ''}</td>
+        <td class="num valor despesa">${Number(v.taxa_valor) > 0 ? formatarMoeda(v.taxa_valor) : '—'}</td>
         <td class="num valor receita">${formatarMoeda(v.valor_total)}</td>
         <td>
           <div class="acoes-linha">
@@ -1333,6 +1699,9 @@
         quantidade: Number(document.getElementById("vd-quantidade").value),
         valor_unitario: Number(document.getElementById("vd-valor-unitario").value),
         cliente_nome: document.getElementById("vd-cliente").value.trim() || null,
+        modalidade_pagamento: document.getElementById("vd-modalidade").value,
+        maquininha_id: document.getElementById("vd-maquininha").value || null,
+        parcelas: Number(document.getElementById("vd-parcelas").value || 1),
         data_venda: document.getElementById("vd-data").value,
       });
       document.getElementById("vd-cliente").value = "";
